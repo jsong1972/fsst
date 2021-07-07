@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <set>
 #include "fmt/core.h"
+#include "fmt/format.h"
 #include "fsst/main/fsst.h"
 
 
@@ -16,15 +17,17 @@ size_t Encode(uint8_t* in,
               uint8_t* out,
               SymbolTable& st) {
     auto oldOut = out;
-    auto oldIn = in;
-    while (in - oldIn < len) {
-        uint16_t pos = st.FindLongestSymbol(in, len);
+    auto tlen = len;
+    while (tlen > 0) {
+        uint16_t pos = st.FindLongestSymbol(in, tlen);
         if (pos <= 255) {
             *(out++) = 255;
             *(out++) = *(in++);
+            tlen--;
         } else {
             *(out++) = (uint8_t) pos;
             in += st.GetSymbolLen(pos);
+            tlen -= st.GetSymbolLen(pos);
         }
     }
 
@@ -45,6 +48,7 @@ size_t Decode(uint8_t* in,
             out += lens[code];
         } else {
             *out++ = *in++;
+            i++;
         }
     }
 
@@ -57,14 +61,16 @@ void BuildSymbolTable(SymbolTable& st, const uint8_t* in, size_t len) {
     uint16_t count1[512];
     uint16_t count2[512][512];
     for (int i = 0; i < 5; i++) {
-        // fmt::print("BuildSymbolTable - iteration {}\n", i);
+        fmt::print("Building symbol table - iteration {}\n", i);
         ::memset(count1, 0, sizeof(uint16_t) * 512);
         ::memset(count2, 0, sizeof(uint16_t)*512*512);
 
         st.CompressCount(count1, count2, in, len);
         st.AdjustTable(count1, count2);
+        // st.DumpSymbols();
     }
     st.Seal();
+    st.DumpSymbols();
 }
 
 
@@ -110,7 +116,7 @@ struct PrioElem {
 class Compare {
 public:
     bool operator()(PrioElem p1, PrioElem p2) {
-        return p1.gain >= p2.gain;
+        return p1.gain < p2.gain;
     }
 };
 
@@ -137,8 +143,9 @@ void SymbolTable::AdjustTable(uint16_t count1[512], uint16_t count2[][512]) {
 
     for (nSymbols_ = 0; nSymbols_ < 256 && !pq.empty(); nSymbols_++) {
         symbols_[256+nSymbols_] = pq.top().symbol;
+        auto elem = pq.top();
         // fmt::print("add a symbol. idx={}, symbol={}, gain={}\n", 256+nSymbols_,
-        //           pq.top().symbol, pq.top().gain);
+        //           elem.symbol, elem.gain);
         pq.pop();
     }
 
@@ -181,6 +188,7 @@ void SymbolTable::DumpSymbols() {
 
 
 void SymbolTable::Seal() {
+    nSymbols_ = std::min((size_t)255, nSymbols_);
     binSymbols_ = new uint64_t[nSymbols_];
     lens_ = new uint8_t[nSymbols_];
 

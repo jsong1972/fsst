@@ -1,4 +1,6 @@
 2. Benchmark performance
+  1. simple implementation
+
 3. Lossy perfect hash
 4. AVX512
 5. Duff's device decode
