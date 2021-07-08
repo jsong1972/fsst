@@ -6,7 +6,8 @@ set(CMAKE_CXX_COMPILER "g++")
 project(fsst)
 
 set(CMAKE_CXX_STANDARD 17)
-
+add_compile_options(-pg)
+add_link_options(-pg)
 
 function(link_threads LIBRARY)
     if (CMAKE_VERSION VERSION_LESS "3.1")

@@ -1,7 +1,12 @@
-2. Benchmark performance
-  1. simple implementation
-
+1. index for FindLongestSymbol
 3. Lossy perfect hash
 4. AVX512
 5. Duff's device decode
 6. File-based implementation
+
+
+## Performance
+
+Baseline:
+  Encode: 3.28M/s
+  Decode: 2243.75M/s
