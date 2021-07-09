@@ -15,13 +15,18 @@ class SymbolTable {
 private:
     size_t nSymbols_;
     std::array<std::string, 512> symbols_;
+    int16_t sIndex[256];
     uint64_t *binSymbols_;
     uint8_t *lens_;
 
 public:
-    SymbolTable() : nSymbols_{0}, symbols_{}, binSymbols_{nullptr}, lens_{nullptr} {
+    SymbolTable() : nSymbols_{0},
+                    symbols_{},
+                    binSymbols_{nullptr},
+                    lens_{nullptr} {
         for (uint16_t code = 0; code <= 255; code++)
             symbols_[code] = std::string(1, (uint8_t)code);
+        ::memset(sIndex, 0, sizeof(sIndex));
     }
 
     ~SymbolTable() {

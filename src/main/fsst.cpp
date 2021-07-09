@@ -141,7 +141,7 @@ void SymbolTable::AdjustTable(uint16_t count1[512], uint16_t count2[][512]) {
         }
     }
 
-    for (nSymbols_ = 0; nSymbols_ < 256 && !pq.empty(); nSymbols_++) {
+    for (nSymbols_ = 0; nSymbols_ < 255 && !pq.empty(); nSymbols_++) {
         symbols_[256+nSymbols_] = pq.top().symbol;
         auto elem = pq.top();
         // fmt::print("add a symbol. idx={}, symbol={}, gain={}\n", 256+nSymbols_,
@@ -149,9 +149,27 @@ void SymbolTable::AdjustTable(uint16_t count1[512], uint16_t count2[][512]) {
         pq.pop();
     }
 
-    if (nSymbols_ > 0)
+    if (nSymbols_ > 0) {
         std::sort(symbols_.begin()+256, symbols_.begin()+256+nSymbols_,
                   std::greater<std::string>());
+
+        ::memset(sIndex, 0, sizeof(sIndex));
+        uint8_t ch = symbols_[256][0];
+        uint8_t chPrev = ch;
+        sIndex[ch] = 256;
+        for (uint16_t i = 257; i < 256+nSymbols_; i++) {
+            ch = symbols_[i][0];
+            if (ch != chPrev) {
+                chPrev = ch;
+                sIndex[ch] = i;
+            }
+        }
+
+        if (sIndex[0] == 0) sIndex[0] = 256 + nSymbols_;
+        for (int i = 1; i < 256; i++) {
+            if (sIndex[i] == 0) sIndex[i] = sIndex[i-1];
+        }
+    }
 
     // DumpSymbols();
 }
@@ -159,8 +177,10 @@ void SymbolTable::AdjustTable(uint16_t count1[512], uint16_t count2[][512]) {
 
 uint16_t SymbolTable::FindLongestSymbol(const uint8_t *in, size_t len) {
     uint8_t letter = in[0];
-    for (uint16_t i = 256; i < 256+nSymbols_; i++) {
-        if (StartsWith_(in, len, i)) return i;
+    for (uint16_t i = sIndex[letter]; i < sIndex[letter-1]; i++) {
+        if (StartsWith_(in, len, i)) {
+            return i;
+        }
     }
 
     return letter;
