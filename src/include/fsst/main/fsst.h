@@ -44,7 +44,6 @@ public:
 
 public:
     uint16_t FindLongestSymbol(const uint8_t* in, size_t len);
-    uint8_t GetSymbolLen(uint16_t pos);
     uint64_t *Get64Symbols() {
         return binSymbols_;
     }

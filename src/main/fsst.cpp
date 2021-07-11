@@ -25,9 +25,9 @@ size_t Encode(uint8_t* in,
             *(out++) = *(in++);
             tlen--;
         } else {
-            *(out++) = (uint8_t) pos;
-            in += st.GetSymbolLen(pos);
-            tlen -= st.GetSymbolLen(pos);
+            *(out++) = (uint8_t) (pos & 0x00ff);
+            in +=  (pos & 0xf000) >> 12;
+            tlen -= (pos & 0xf000) >> 12;
         }
     }
 
@@ -90,10 +90,10 @@ void SymbolTable::CompressCount(uint16_t count1[512],
                                 size_t len) {
     int pos = 0;
     uint16_t prev;
-    auto code = FindLongestSymbol(in, len);
+    auto code = FindLongestSymbol(in, len) & 0xfff;
     while ((pos += symbols_[code].size()) < len) {
         prev = code;
-        code = FindLongestSymbol(&in[pos], len-pos);
+        code = FindLongestSymbol(&in[pos], len-pos) & 0x0fff;
         count1[code]++; // count single symbol[code]
         count2[prev][code]++; //
         if (code >= 256) {
@@ -179,17 +179,13 @@ uint16_t SymbolTable::FindLongestSymbol(const uint8_t *in, size_t len) {
     uint8_t letter = in[0];
     for (uint16_t i = sIndex[letter]; i < sIndex[letter-1]; i++) {
         if (StartsWith_(in, len, i)) {
-            return i;
+            return i | (((uint16_t) symbols_[i].size()) << 12);
         }
     }
 
     return letter;
 }
 
-
-uint8_t SymbolTable::GetSymbolLen(uint16_t pos) {
-    return symbols_[pos].size();
-}
 
 /**
  * Checks if "in" starts with symbols_[subindex]
