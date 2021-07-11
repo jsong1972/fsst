@@ -1,23 +1,7 @@
-1. index for FindLongestSymbol
 3. Lossy perfect hash
 4. AVX512
 5. Duff's device decode
-6. File-based implementation
 
 
-## Performance
+Now, Encode() runs too fast to show which part of code consume CPU. Need to tweak benchmark further.
 
-Baseline:
-  Encode: 3.28M/s
-  Decode: 2243.75M/s
-
-Index to symbol table:
-  Encode: 18.95M/s
-  Decode: 2639.21M/s
-
-```
-  %   cumulative   self              self     total
- time   seconds   seconds    calls  ms/call  ms/call  name
- 37.72      0.89     0.89 1018130360     0.00     0.00  fsst::SymbolTable::StartsWith_(unsigned char const*, unsigned long, unsigned short)
- 33.90      1.69     0.80 156112557     0.00     0.00  fsst::SymbolTable::FindLongestSymbol(unsigned char const*, unsigned long)
-```
