@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
         fmt::print("I/O failure\n");
         return 3;
     }
-    auto bufData = std::make_unique<uint8_t[]>(nDataFileSize);
+    auto bufData = std::make_unique<uint8_t[]>(nDataFileSize + 16);
     int fd = ::open(pathDataFile.c_str(), O_RDONLY);
     if (fd < 0) {
         fmt::print("Failed to open the file {} - {}\n", pathDataFile.generic_string(), strerror(errno));

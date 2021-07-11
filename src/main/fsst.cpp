@@ -19,7 +19,7 @@ size_t Encode(uint8_t* in,
     auto oldOut = out;
     auto tlen = len;
     while (tlen > 0) {
-        uint16_t pos = st.FindLongestSymbol(in, tlen);
+        uint16_t pos = st.FindLongestSymbol2(in, tlen);
         if (pos <= 255) {
             *(out++) = 255;
             *(out++) = *(in++);
@@ -175,6 +175,9 @@ void SymbolTable::AdjustTable(uint16_t count1[512], uint16_t count2[][512]) {
 }
 
 
+/**
+ * The highest 4-bit is the symbol length, and the least 12-bit is the symbol code
+ */
 uint16_t SymbolTable::FindLongestSymbol(const uint8_t *in, size_t len) {
     uint8_t letter = in[0];
     for (uint16_t i = sIndex[letter]; i < sIndex[letter-1]; i++) {
@@ -190,9 +193,48 @@ uint16_t SymbolTable::FindLongestSymbol(const uint8_t *in, size_t len) {
 /**
  * Checks if "in" starts with symbols_[subindex]
  */
-bool SymbolTable::StartsWith_(const uint8_t *in, size_t len, uint16_t subindex) {
+inline bool SymbolTable::StartsWith_(const uint8_t *in, size_t len, uint16_t subindex) {
     size_t l = symbols_[subindex].size();
     return len >= l && (::memcmp(symbols_[subindex].data(), in, l)==0);
+}
+
+
+static uint64_t MASKS_[9] = {
+    0x0000000000000000,
+    0x00000000000000ff,
+    0x000000000000ffff,
+    0x0000000000ffffff,
+    0x00000000ffffffff,
+    0x000000ffffffffff,
+    0x0000ffffffffffff,
+    0x00ffffffffffffff,
+    0xffffffffffffffff
+};
+
+
+/**
+ * Checks if "in" starts with symbols_[subindex]
+ */
+inline bool SymbolTable::StartsWith2_(const uint8_t *in, size_t len, uint16_t subindex) {
+    auto lenSymbol = lens_[subindex];
+    return ((*(uint64_t*)in) & MASKS_[lenSymbol]) == binSymbols_[subindex];
+}
+
+
+/**
+ * The highest 4-bit is the symbol length, and the least 12-bit is the symbol code.
+ *
+ * This function is available after Seal() is called because it uses binSymbols_ and lens_.
+ */
+inline uint16_t SymbolTable::FindLongestSymbol2(const uint8_t *in, size_t len) {
+        uint8_t letter = in[0];
+        for (uint16_t i = sIndex[letter]-256; i < sIndex[letter-1]-256; i++) {
+            if (StartsWith2_(in, len, i)) {
+                return i | (((uint16_t)lens_[i]) << 12);
+            }
+        }
+
+        return letter;
 }
 
 
@@ -209,8 +251,8 @@ void SymbolTable::Seal() {
     lens_ = new uint8_t[nSymbols_];
 
     for (size_t i = 0; i < nSymbols_; i++) {
-        binSymbols_[i] = *(uint64_t *)symbols_[256+i].data();
         lens_[i] = (uint8_t)symbols_[256+i].size();
+        binSymbols_[i] = (*(uint64_t *)symbols_[256+i].data()) & MASKS_[lens_[i]];
     }
 }
 

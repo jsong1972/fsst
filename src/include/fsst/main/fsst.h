@@ -44,6 +44,7 @@ public:
 
 public:
     uint16_t FindLongestSymbol(const uint8_t* in, size_t len);
+    uint16_t FindLongestSymbol2(const uint8_t* in, size_t len);
     uint64_t *Get64Symbols() {
         return binSymbols_;
     }
@@ -56,6 +57,7 @@ public:
 
 private:
     bool StartsWith_(const uint8_t *in, size_t len, uint16_t subindex);
+    bool StartsWith2_(const uint8_t *in, size_t len, uint16_t subindex);
 };
 
 

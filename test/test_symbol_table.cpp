@@ -9,14 +9,38 @@
 namespace fs = std::filesystem;
 
 
+static uint64_t MASKS_[9] = {
+        0x0000000000000000,
+        0x00000000000000ff,
+        0x000000000000ffff,
+        0x0000000000ffffff,
+        0x00000000ffffffff,
+        0x000000ffffffffff,
+        0x0000ffffffffffff,
+        0x00ffffffffffffff,
+        0xffffffffffffffff
+};
+
+
+TEST (SymbolTable, Hex) {
+    char s[8];
+    ::memcpy(s, "12345678", 7);
+    s[7] = 0x76;
+    uint64_t a = (*(uint64_t *)s) & MASKS_[7];
+    fmt::print("{:x}\n", a);
+}
+
+
 TEST (SymbolTable, Build) {
     std::string data = "http://www.google.ca http://www.whatsapp.com http://www.amazon.in";
+    auto ptrData = std::make_unique<uint8_t[]>(data.size()+16);
+    ::memcpy(ptrData.get(), data.data(), data.size());
 
     fsst::SymbolTable st;
-    fsst::BuildSymbolTable(st, (uint8_t*) data.data(), data.size());
+    fsst::BuildSymbolTable(st, ptrData.get(), data.size());
 
     auto out = std::make_unique<uint8_t[]>(data.size() * 2);
-    auto lenAfterEncode = fsst::Encode((uint8_t*)data.data(), data.size(), out.get(), st);
+    auto lenAfterEncode = fsst::Encode(ptrData.get(), data.size(), out.get(), st);
     fmt::print("lenAfterEncode={}\n", lenAfterEncode);
 
     auto raw = std::make_unique<uint8_t[]>(data.size() + 8);
@@ -27,6 +51,8 @@ TEST (SymbolTable, Build) {
     fmt::print("raw string = {}\n", result);
 
     ASSERT_EQ(data, result);
+    ASSERT_TRUE(lenAfterEncode < data.size());
+    ASSERT_TRUE(data.size() == lenAfterDecode);
 }
 
 
@@ -131,12 +157,14 @@ TEST (SymbolTable, LongBuild) {
                        "edpbsl@yahoo.com\n"
                        "georgs1@o2.pl\n"
                        "smeeker68@buckeye-express.com";
+    auto ptrData = std::make_unique<uint8_t[]>(data.size()+16);
+    ::memcpy(ptrData.get(), data.data(), data.size());
 
     fsst::SymbolTable st;
-    fsst::BuildSymbolTable(st, (uint8_t*) data.data(), data.size());
+    fsst::BuildSymbolTable(st, ptrData.get(), data.size());
 
     auto out = std::make_unique<uint8_t[]>(data.size() * 2);
-    auto lenAfterEncode = fsst::Encode((uint8_t*)data.data(), data.size(), out.get(), st);
+    auto lenAfterEncode = fsst::Encode(ptrData.get(), data.size(), out.get(), st);
     fmt::print("rawDataSize={}, lenAfterEncode={}\n", data.size(), lenAfterEncode);
 
     auto raw = std::make_unique<uint8_t[]>(data.size() * 2);
@@ -144,6 +172,7 @@ TEST (SymbolTable, LongBuild) {
                                        raw.get(), st.Get64Symbols(), st.GetLens());
     fmt::print("lenAfterDecode={}\n", lenAfterDecode);
     ASSERT_EQ(data.size(), lenAfterDecode);
+    ASSERT_TRUE(data.size() >= lenAfterEncode);
     ASSERT_EQ(0, ::memcmp(data.data(), raw.get(), lenAfterDecode));
 }
 
